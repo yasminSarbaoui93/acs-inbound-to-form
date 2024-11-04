@@ -6,7 +6,8 @@ using Azure.AI.OpenAI;
 using Azure.Communication;
 using Azure.Communication.CallAutomation;
 using Azure.Messaging;
-using assistant.assistantprompt
+using System.Xml.Serialization;
+
 
 // Create a new web application builder
 var builder = WebApplication.CreateBuilder(args);
@@ -55,7 +56,7 @@ app.MapPost("/api/generate_prompt", async context =>
     AnalyzeResult result = operation.Value;
 
     // Construct the prompt for the chatbot
-    string prompt = assistantprompt;
+    string prompt = Assistant.AssistantPrompt;
 
     prompt += result.Content;
 
