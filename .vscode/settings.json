@@ -1,0 +1,5 @@
+{
+    "appService.preDeployTask": "publish-release",
+    "appService.deploySubpath": "bin\\Release\\net7.0\\publish",
+    "appService.defaultWebAppToDeploy": "/subscriptions/49d4d128-18c3-4234-882e-7474a719c4ca/resourceGroups/AI/providers/Microsoft.Web/sites/rbkl-acs-call-automation"
+}
