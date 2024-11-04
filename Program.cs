@@ -167,9 +167,9 @@ async Task<string> GetChatGPTResponse(List<ChatMessage> messages)
 async Task SayAndRecognize(CallMedia callConnectionMedia, PhoneNumberIdentifier phoneId, string response)
 {
     // Set up the text source for the chatbot's response
-    var chatGPTResponseSource = new TextSource(response, "en-US-SaraNeural");
+    var chatGPTResponseSource = new TextSource(response, "it-IT-AlessioMultilingualNeural");
 
-    String ssmlToPlay = $"<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xml:lang=\"en-US\"><voice name=\"en-US-SaraNeural\">{response}</voice></speak>"; 
+    String ssmlToPlay = $"<speak version=\"1.0\" xmlns=\"http://www.w3.org/2001/10/synthesis\" xml:lang=\"en-US\"><voice name=\"it-IT-AlessioMultilingualNeural\">{response}</voice></speak>"; 
     var playSource = new SsmlSource(ssmlToPlay);
 
     //log
