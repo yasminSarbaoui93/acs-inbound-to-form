@@ -6,6 +6,7 @@ using Azure.AI.OpenAI;
 using Azure.Communication;
 using Azure.Communication.CallAutomation;
 using Azure.Messaging;
+using assistant.assistantprompt
 
 // Create a new web application builder
 var builder = WebApplication.CreateBuilder(args);
@@ -54,16 +55,7 @@ app.MapPost("/api/generate_prompt", async context =>
     AnalyzeResult result = operation.Value;
 
     // Construct the prompt for the chatbot
-    string prompt = @"You are a car dealership call center agent called Sarah, that calls a potential buyer. You need to collect information on the car the are looking for. 
-                You need to ask 1 question and wait for the response before asking the next question. Don't generate answers, the user
-                will answer each question in the next prompt. Be warm, polite and funny (no smileys). If the question is not relevant you can skip it or adapt it to the context. Start by introducing yourself and the purpose of the call. Once all the information are collected politely thank the buyer, summarize the car they are looking for and tell them they will be contacted by a sales rep as soon as possible. 
-            Information to be collected:
-                - Car make
-                - Color preference
-                - Price range
-                - New or second-hand car
-                - Diesel or gasoline engine preference
-                - Any additional requests or preferences";
+    string prompt = assistantprompt;
 
     prompt += result.Content;
 
