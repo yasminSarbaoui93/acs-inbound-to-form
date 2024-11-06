@@ -123,20 +123,18 @@ app.MapPost("/api/incomingcall", async (EventGridEvent[] events, CallAutomationC
             }
         }
 
-        //TEST CODICE AGGIUNTIVO
+  
         var contextId = Guid.NewGuid().ToString();
-        var messages = new[] {
-            new ChatMessage(ChatRole.System, Assistant.AssistantPrompt)
-        };
-        
-        chatSessions[contextId] = messages.ToList();
 
-        //FINE TEST QUI
+
 
 
 
         var incomingCall = JsonSerializer.Deserialize<IncomingCall>(eventGridEvent.Data);
-        //await client.AnswerCallAsync(incomingCall.IncomingCallContext, new Uri(builder.Configuration["HOST_NAME"] + "api/callbacks"));
+        
+        
+        
+        // //await client.AnswerCallAsync(incomingCall.IncomingCallContext, new Uri(builder.Configuration["HOST_NAME"] + "api/callbacks"));
         await client.AnswerCallAsync(incomingCall.IncomingCallContext, new Uri(builder.Configuration["HOST_NAME"] + "api/callbacks/" + contextId));
     
     }
