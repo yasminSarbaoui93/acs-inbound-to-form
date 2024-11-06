@@ -95,6 +95,35 @@ app.MapPost("/api/call", async context =>
     var result = await callClient.CreateCallAsync(createCallOptions);
 });
 
+app.MapPost("/api/incomingcall", async (EventGridEvent[] events, CallAutomationClient client) =>
+{
+    foreach (EventGridEvent eventGridEvent in events)
+    {
+        // Handle system events
+        if (eventGridEvent.TryGetSystemEventData(out object eventData))
+        {
+            // Handle the subscription validation event
+            if (eventData is SubscriptionValidationEventData subscriptionValidationEventData)
+            {
+                // Do any additional validation (as required) and then return back the below response
+                var responseData = new
+                {
+                    ValidationResponse = subscriptionValidationEventData.ValidationCode
+                };
+
+                return Results.Ok(responseData);
+            }
+        }
+
+        var incomingCall = JsonSerializer.Deserialize<IncomingCall>(eventGridEvent.Data);
+        await client.AnswerCallAsync(incomingCall.IncomingCallContext, new Uri(builder.Configuration["HOST_NAME"] + "api/callbacks"));
+    }
+
+    return Results.Ok();
+});
+
+
+
 app.MapPost("/api/callbacks/{contextId}", async (context) =>
 {
     // Parse incoming cloud events
