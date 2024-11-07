@@ -5,13 +5,18 @@ using Azure.AI.FormRecognizer.DocumentAnalysis;
 using Azure.AI.OpenAI;
 using Azure.Communication;
 using Azure.Communication.CallAutomation;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Http.Extensions;
 using Azure.Messaging;
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.EventGrid.SystemEvents;
+using CallAutomation.Contracts;
+using CallAutomation;
 using System.Xml.Serialization;
 using System.Text.Json;
-using CallAutomation.Contracts;
+using System.ComponentModel.DataAnnotations;
+using System.Text.RegularExpressions;
+
 
 
 
@@ -103,10 +108,11 @@ app.MapPost("/api/call", async context =>
     var result = await callClient.CreateCallAsync(createCallOptions);
 });
 
-app.MapPost("/api/incomingcall", async (EventGridEvent[] events, CallAutomationClient client) =>
+app.MapPost("/api/incomingcall", async (EventGridEvent[] events, ILogger<Program> logger) =>
 {
     foreach (EventGridEvent eventGridEvent in events)
     {
+        logger.LogInformation($"Incoming Call event received");
         // Handle system events
         if (eventGridEvent.TryGetSystemEventData(out object eventData))
         {
@@ -123,20 +129,20 @@ app.MapPost("/api/incomingcall", async (EventGridEvent[] events, CallAutomationC
             }
         }
 
-  
-        var contextId = Guid.NewGuid().ToString();
+        var jsonObject = Helper.GetJsonObject(eventGridEvent.Data);
+        var callerId = Helper.GetCallerId(jsonObject);
+        var incomingCallContext = Helper.GetIncomingCallContext(jsonObject);
+        var callbackUri = new Uri(new Uri($"{HOST_NAME}"), $"/api/callbacks/{Guid.NewGuid()}?callerId={callerId}");
+        Console.WriteLine($"Callback Url: {callbackUri}");
+        var options = new AnswerCallOptions(incomingCallContext, callbackUri)
+        {
+            CallIntellIntelligenceOptions = new CallIntelligenceOptions() { CognitiveServicesEndpoint = new Uri($"{AZURE_COG_SERVICES_ENDPOINT}") }
+        };
 
+        AnswerCallResult answerCallResult = await callClient.AnswerCallAsync(options);
+        Console.WriteLine($"Answered call for connection id: {answerCallResult.CallConnection.CallConnectionId}");
 
-
-
-
-        var incomingCall = JsonSerializer.Deserialize<IncomingCall>(eventGridEvent.Data);
-        
-        
-        
-        // //await client.AnswerCallAsync(incomingCall.IncomingCallContext, new Uri(builder.Configuration["HOST_NAME"] + "api/callbacks"));
-        await client.AnswerCallAsync(incomingCall.IncomingCallContext, new Uri(builder.Configuration["HOST_NAME"] + "api/callbacks/" + contextId));
-    
+       
     }
 
     return Results.Ok();
