@@ -136,13 +136,23 @@ app.MapPost("/api/incomingcall", async (EventGridEvent[] events, ILogger<Program
         Console.WriteLine($"Callback Url: {callbackUri}");
         var options = new AnswerCallOptions(incomingCallContext, callbackUri)
         {
-            CallIntellIntelligenceOptions = new CallIntelligenceOptions() { CognitiveServicesEndpoint = new Uri($"{AZURE_COG_SERVICES_ENDPOINT}") }
+            CallIntelligenceOptions = new CallIntelligenceOptions() { CognitiveServicesEndpoint = new Uri($"{AZURE_COG_SERVICES_ENDPOINT}") }
         };
 
         AnswerCallResult answerCallResult = await callClient.AnswerCallAsync(options);
         Console.WriteLine($"Answered call for connection id: {answerCallResult.CallConnection.CallConnectionId}");
 
-       
+       //Check if the call was connected successfully
+       var answer_result = await answerCallResult.WaitForEventProcessorAsync();
+       if (answer_result.IsSuccess)
+       {
+            Console.WriteLine($"Call connected event received for connection id: {answer_result.SuccessResult.CallConnectionId}");
+            var callConnectionMedia = answerCallResult.CallConnection.GetCallMedia();
+            
+            //Here instead of handle recognize async we want to play the conversation with the Bot
+            await HandleRecognizeAsync(callConnectionMedia, callerId, helloPrompt);
+        }
+
     }
 
     return Results.Ok();
