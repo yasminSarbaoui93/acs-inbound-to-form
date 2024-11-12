@@ -77,36 +77,36 @@ app.MapPost("/api/generate_prompt", async context =>
     await context.Response.WriteAsync(prompt);
 });
 
-app.MapPost("/api/call", async context =>
-{
-    // Deserialize the request body into a CallRequest object
-    var data = await context.Request.ReadFromJsonAsync<CallRequest>();
-    if (data == null) return;
+// app.MapPost("/api/call", async context =>
+// {
+//     // Deserialize the request body into a CallRequest object
+//     var data = await context.Request.ReadFromJsonAsync<CallRequest>();
+//     if (data == null) return;
 
-    // Set up a call invite
-    var callInvite = new CallInvite(
-        new PhoneNumberIdentifier(data.PhoneNumber),
-        new PhoneNumberIdentifier(ACS_PHONE_NUMBER)
-    );
+//     // Set up a call invite
+//     var callInvite = new CallInvite(
+//         new PhoneNumberIdentifier(data.PhoneNumber),
+//         new PhoneNumberIdentifier(ACS_PHONE_NUMBER)
+//     );
 
-    // Generate a unique ID for the chat session
-    var contextId = Guid.NewGuid().ToString();
-    var messages = new[] {
-        new ChatMessage(ChatRole.System, data.Prompt)
-    };
-    // Store the messages associated with the chat session
-    chatSessions[contextId] = messages.ToList();
+//     // Generate a unique ID for the chat session
+//     var contextId = Guid.NewGuid().ToString();
+//     var messages = new[] {
+//         new ChatMessage(ChatRole.System, data.Prompt)
+//     };
+//     // Store the messages associated with the chat session
+//     chatSessions[contextId] = messages.ToList();
 
-    // Set up call options
-    var createCallOptions = new CreateCallOptions(callInvite,
-        new Uri($"{HOST_NAME}/api/callbacks/{contextId}?callerId={WebUtility.UrlEncode(data.PhoneNumber)}"))
-    // {
-    //     CognitiveServicesEndpoint = new Uri(AZURE_COG_SERVICES_ENDPOINT),
-    // };
+//     // Set up call options
+//     var createCallOptions = new CreateCallOptions(callInvite,
+//         new Uri($"{HOST_NAME}/api/callbacks/{contextId}?callerId={WebUtility.UrlEncode(data.PhoneNumber)}"))
+//     // {
+//          CognitiveServicesEndpoint = new Uri(AZURE_COG_SERVICES_ENDPOINT),
+//     // };
 
-    // Create the call
-    var result = await callClient.CreateCallAsync(createCallOptions);
-});
+//     // Create the call
+//     var result = await callClient.CreateCallAsync(createCallOptions);
+// });
 
 app.MapPost("/api/incomingcall", async (EventGridEvent[] events, ILogger<Program> logger) =>
 {
