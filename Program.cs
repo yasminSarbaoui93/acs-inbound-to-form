@@ -132,7 +132,9 @@ app.MapPost("/api/incomingcall", async (EventGridEvent[] events, ILogger<Program
         var jsonObject = Helper.GetJsonObject(eventGridEvent.Data);
         var callerId = Helper.GetCallerId(jsonObject);
         var incomingCallContext = Helper.GetIncomingCallContext(jsonObject);
-        var callbackUri = new Uri(new Uri($"{HOST_NAME}"), $"/api/callbacks/{Guid.NewGuid()}?callerId={callerId}");
+        var incomingContextId = Guid.NewGuid().ToString();
+
+        var callbackUri = new Uri(new Uri($"{HOST_NAME}"), $"/api/callbacks/{incomingContextId}?callerId={callerId}");
         Console.WriteLine($"Callback Url: {callbackUri}");
         var options = new AnswerCallOptions(incomingCallContext, callbackUri)
         {
@@ -144,13 +146,24 @@ app.MapPost("/api/incomingcall", async (EventGridEvent[] events, ILogger<Program
 
        //Check if the call was connected successfully
        var answer_result = await answerCallResult.WaitForEventProcessorAsync();
+
+        /////////////////test////////////////////////////////////
+        
+        var messages = new[] {
+        new ChatMessage(ChatRole.System, Assistant.AssistantPrompt)
+        };
+        // Store the messages associated with the chat session
+        chatSessions[incomingContextId] = messages.ToList();
+
+        ////////////////end test/////////////////////////////////
+
        if (answer_result.IsSuccess)
        {
             Console.WriteLine($"Call connected event received for connection id: {answer_result.SuccessResult.CallConnectionId}");
             var callConnectionMedia = answerCallResult.CallConnection.GetCallMedia();
             
             //Here instead of handle recognize async we want to play the conversation with the Bot
-            await HandleRecognizeAsync(callConnectionMedia, callerId, helloPrompt);
+            // await SayAndRecognize(callConnectionMedia, callerId, helloPrompt);
         }
 
     }
