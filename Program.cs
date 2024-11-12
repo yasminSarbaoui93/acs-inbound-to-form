@@ -163,7 +163,8 @@ app.MapPost("/api/incomingcall", async (EventGridEvent[] events, ILogger<Program
             var callConnectionMedia = answerCallResult.CallConnection.GetCallMedia();
             
             //Here instead of handle recognize async we want to play the conversation with the Bot
-            // await SayAndRecognize(callConnectionMedia, callerId, helloPrompt);
+            //await SayAndRecognize(callConnectionMedia, callerId, "Hello, how can I help you today?");
+            await HandleRecognizeAsync(callConnectionMedia, callerId, Assistant.AssistantPrompt);
         }
 
     }
@@ -257,9 +258,34 @@ async Task SayAndRecognize(CallMedia callConnectionMedia, PhoneNumberIdentifier 
     var recognize_result = await callConnectionMedia.StartRecognizingAsync(recognizeOptions);
 }
 
+//da cancellare
+async Task HandleRecognizeAsync(CallMedia callConnectionMedia, string callerId, string message)
+{
+    // Play greeting message
+    var greetingPlaySource = new TextSource(message)
+    {
+        VoiceName = "en-US-NancyNeural"
+    };
+
+    var recognizeOptions =
+        new CallMediaRecognizeSpeechOptions(
+            targetParticipant: CommunicationIdentifier.FromRawId(callerId))
+        {
+            InterruptPrompt = false,
+            InitialSilenceTimeout = TimeSpan.FromSeconds(15),
+            Prompt = greetingPlaySource,
+            OperationContext = "GetFreeFormText",
+            EndSilenceTimeout = TimeSpan.FromMilliseconds(500)
+        };
+
+    var recognize_result = await callConnectionMedia.StartRecognizingAsync(recognizeOptions);
+}
+
 public class CallRequest
 {
     public required string PhoneNumber { get; set; }
     public required string Prompt { get; set; }
 }
+
+
 
