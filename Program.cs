@@ -100,9 +100,9 @@ app.MapPost("/api/call", async context =>
     // Set up call options
     var createCallOptions = new CreateCallOptions(callInvite,
         new Uri($"{HOST_NAME}/api/callbacks/{contextId}?callerId={WebUtility.UrlEncode(data.PhoneNumber)}"))
-    {
-        CognitiveServicesEndpoint = new Uri(AZURE_COG_SERVICES_ENDPOINT),
-    };
+    // {
+    //     CognitiveServicesEndpoint = new Uri(AZURE_COG_SERVICES_ENDPOINT),
+    // };
 
     // Create the call
     var result = await callClient.CreateCallAsync(createCallOptions);
