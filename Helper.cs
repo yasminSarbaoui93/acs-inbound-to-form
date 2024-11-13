@@ -24,6 +24,12 @@ public static class Helper
         return (string)(jsonObject["from"]["rawId"]);
     }
 
+    //add a method to get the caller phone number
+    public static string GetCallerPhoneNumber(JsonObject jsonObject)
+    {
+        return (string)(jsonObject["from"]["phoneNumber"]["value"]);
+    }
+
     public static string GetIncomingCallContext(JsonObject jsonObject)
     {
         return (string)jsonObject["incomingCallContext"];

@@ -132,10 +132,16 @@ app.MapPost("/api/incomingcall", async (EventGridEvent[] events, ILogger<Program
         var jsonObject = Helper.GetJsonObject(eventGridEvent.Data);
         var callerId = Helper.GetCallerId(jsonObject);
         var incomingCallContext = Helper.GetIncomingCallContext(jsonObject);
+        // var incomingContextId = Guid.NewGuid().ToString();
+
+        //inizio test
+        var phoneNumber = Helper.GetCallerPhoneNumber(jsonObject);
+        //fine test
+
         var incomingContextId = Guid.NewGuid().ToString();
 
         //a questo punto arriva e chiama callbacks api
-        var callbackUri = new Uri($"{HOST_NAME}/api/callbacks/{incomingContextId}?callerId={callerId}");
+        var callbackUri = new Uri($"{HOST_NAME}/api/callbacks/{incomingContextId}?callerId={WebUtility.UrlEncode(phoneNumber)}");
         Console.WriteLine($"Callback Url: {callbackUri}");
         var options = new AnswerCallOptions(incomingCallContext, callbackUri)
         {
@@ -169,6 +175,7 @@ app.MapPost("/api/incomingcall", async (EventGridEvent[] events, ILogger<Program
             //await HandleRecognizeAsync(callConnectionMedia, callerId, Assistant.AssistantPrompt);
         }
 
+
     }
 
     return Results.Ok();
@@ -187,7 +194,7 @@ app.MapPost("/api/incomingcall", async (EventGridEvent[] events, ILogger<Program
 // });
 
 
- app.MapPost("/api/callbacks/{contextId}", async (context) =>
+app.MapPost("/api/callbacks/{contextId}", async (context) =>
 {
     // Parse incoming cloud events
     var cloudEvents = await context.Request.ReadFromJsonAsync<CloudEvent[]>() ?? Array.Empty<CloudEvent>();
