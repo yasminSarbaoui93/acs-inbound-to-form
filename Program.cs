@@ -135,7 +135,7 @@ app.MapPost("/api/incomingcall", async (EventGridEvent[] events, ILogger<Program
         var incomingContextId = Guid.NewGuid().ToString();
 
         //a questo punto arriva e chiama callbacks api
-        var callbackUri = new Uri(new Uri($"{HOST_NAME}"), $"/api/callbacks/{incomingContextId}?callerId={callerId}");
+        var callbackUri = new Uri($"{HOST_NAME}/api/callbacks/{incomingContextId}?callerId={callerId}");
         Console.WriteLine($"Callback Url: {callbackUri}");
         var options = new AnswerCallOptions(incomingCallContext, callbackUri)
         {
@@ -162,11 +162,11 @@ app.MapPost("/api/incomingcall", async (EventGridEvent[] events, ILogger<Program
        if (answer_result.IsSuccess)
        {
             Console.WriteLine($"Call connected event received for connection id: {answer_result.SuccessResult.CallConnectionId}");
-            var callConnectionMedia = answerCallResult.CallConnection.GetCallMedia();
+            //var callConnectionMedia = answerCallResult.CallConnection.GetCallMedia();
             
             //Here instead of handle recognize async we want to play the conversation with the Bot
             //await SayAndRecognize(callConnectionMedia, callerId, "Hello, how can I help you today?");
-            await HandleRecognizeAsync(callConnectionMedia, callerId, Assistant.AssistantPrompt);
+            //await HandleRecognizeAsync(callConnectionMedia, callerId, Assistant.AssistantPrompt);
         }
 
     }
@@ -174,60 +174,60 @@ app.MapPost("/api/incomingcall", async (EventGridEvent[] events, ILogger<Program
     return Results.Ok();
 });
 
-app.MapPost("/api/callbacks/{contextId}", async (
-    [FromBody] CloudEvent[] cloudEvents,
-    [FromRoute] string contextId,
-    [Required] string callerId,
-    CallAutomationClient callAutomationClient,
-    ILogger<Program> logger) =>
-{
-    var eventProcessor = callClient.GetEventProcessor();
-    eventProcessor.ProcessEvents(cloudEvents);
-    return Results.Ok();
-});
-
-
-//  app.MapPost("/api/callbacks/{contextId}", async (context) =>
+// app.MapPost("/api/callbacks/{contextId}", async (
+//     [FromBody] CloudEvent[] cloudEvents,
+//     [FromRoute] string contextId,
+//     [Required] string callerId,
+//     CallAutomationClient callAutomationClient,
+//     ILogger<Program> logger) =>
 // {
-//     // Parse incoming cloud events
-//     var cloudEvents = await context.Request.ReadFromJsonAsync<CloudEvent[]>() ?? Array.Empty<CloudEvent>();
-//     var contextId = context.Request.RouteValues["contextId"]?.ToString() ?? "";
-//     var callerId = context.Request.Query["callerId"].ToString() ?? "";
-
-//     foreach (var cloudEvent in cloudEvents)
-//     {
-//         // Parse the cloud event to get the call event details
-//         CallAutomationEventBase callEvent = CallAutomationEventParser.Parse(cloudEvent);
-//         var callConnection = callClient.GetCallConnection(callEvent.CallConnectionId);
-//         var callConnectionMedia = callConnection.GetCallMedia();
-
-//         var messages = chatSessions[contextId];
-
-//         var phoneId = new PhoneNumberIdentifier(callerId);
-
-//         if (callEvent is CallConnected)
-//         {
-//             // If the call is connected, get a response from the chatbot and send it to the user
-//             var response = await GetChatGPTResponse(messages);
-//             messages.Add(new ChatMessage(ChatRole.Assistant, response));
-//             await SayAndRecognize(callConnectionMedia, phoneId, response);
-//         }
-//         if (callEvent is RecognizeCompleted recogEvent
-//             && recogEvent.RecognizeResult is SpeechResult speech_result)
-//         {
-//             // If speech is recognized, get a response from the chatbot based on the recognized speech and send it to the user
-//             messages.Add(new ChatMessage(ChatRole.User, speech_result.Speech));
-
-//             var response = await GetChatGPTResponse(messages);
-//             //Handle complete data collection
-//             //if(response == "complete"){
-//             //    await callConnectionMedia.StopRecognizingAsync();
-//             //}
-//             messages.Add(new ChatMessage(ChatRole.Assistant, response));
-//             await SayAndRecognize(callConnectionMedia, phoneId, response);
-//         }
-//     }
+//     var eventProcessor = callClient.GetEventProcessor();
+//     eventProcessor.ProcessEvents(cloudEvents);
+//     return Results.Ok();
 // });
+
+
+ app.MapPost("/api/callbacks/{contextId}", async (context) =>
+{
+    // Parse incoming cloud events
+    var cloudEvents = await context.Request.ReadFromJsonAsync<CloudEvent[]>() ?? Array.Empty<CloudEvent>();
+    var contextId = context.Request.RouteValues["contextId"]?.ToString() ?? "";
+    var callerId = context.Request.Query["callerId"].ToString() ?? "";
+
+    foreach (var cloudEvent in cloudEvents)
+    {
+        // Parse the cloud event to get the call event details
+        CallAutomationEventBase callEvent = CallAutomationEventParser.Parse(cloudEvent);
+        var callConnection = callClient.GetCallConnection(callEvent.CallConnectionId);
+        var callConnectionMedia = callConnection.GetCallMedia();
+
+        var messages = chatSessions[contextId];
+
+        var phoneId = new PhoneNumberIdentifier(callerId);
+
+        if (callEvent is CallConnected)
+        {
+            // If the call is connected, get a response from the chatbot and send it to the user
+            var response = await GetChatGPTResponse(messages);
+            messages.Add(new ChatMessage(ChatRole.Assistant, response));
+            await SayAndRecognize(callConnectionMedia, phoneId, response);
+        }
+        if (callEvent is RecognizeCompleted recogEvent
+            && recogEvent.RecognizeResult is SpeechResult speech_result)
+        {
+            // If speech is recognized, get a response from the chatbot based on the recognized speech and send it to the user
+            messages.Add(new ChatMessage(ChatRole.User, speech_result.Speech));
+
+            var response = await GetChatGPTResponse(messages);
+            //Handle complete data collection
+            //if(response == "complete"){
+            //    await callConnectionMedia.StopRecognizingAsync();
+            //}
+            messages.Add(new ChatMessage(ChatRole.Assistant, response));
+            await SayAndRecognize(callConnectionMedia, phoneId, response);
+        }
+    }
+});
 
 app.Run();
 
