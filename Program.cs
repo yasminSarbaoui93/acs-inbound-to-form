@@ -39,7 +39,7 @@ var OPENAI_DEPLOYMENT_NAME = configuration["OPENAI_DEPLOYMENT_NAME"] ?? throw ne
 var HOST_NAME = configuration["HOST_NAME"] ?? throw new Exception("HOST_NAME is not set");
 
 // Create a new call automation client using the Azure Communication Service connection string
-var callClient = new CallAutomationClient(ACS_CONNECTION_STRING);
+var callClient = new CallAutomationClient(connectionString : ACS_CONNECTION_STRING);
 // Create a dictionary to store chat sessions
 var chatSessions = new Dictionary<string, List<ChatMessage>>();
 
@@ -134,6 +134,7 @@ app.MapPost("/api/incomingcall", async (EventGridEvent[] events, ILogger<Program
         var incomingCallContext = Helper.GetIncomingCallContext(jsonObject);
         var incomingContextId = Guid.NewGuid().ToString();
 
+        //a questo punto arriva e chiama callbacks api
         var callbackUri = new Uri(new Uri($"{HOST_NAME}"), $"/api/callbacks/{incomingContextId}?callerId={callerId}");
         Console.WriteLine($"Callback Url: {callbackUri}");
         var options = new AnswerCallOptions(incomingCallContext, callbackUri)
@@ -141,6 +142,7 @@ app.MapPost("/api/incomingcall", async (EventGridEvent[] events, ILogger<Program
             CallIntelligenceOptions = new CallIntelligenceOptions() { CognitiveServicesEndpoint = new Uri($"{AZURE_COG_SERVICES_ENDPOINT}") }
         };
 
+        //a questo punto non arriva
         AnswerCallResult answerCallResult = await callClient.AnswerCallAsync(options);
         Console.WriteLine($"Answered call for connection id: {answerCallResult.CallConnection.CallConnectionId}");
 
@@ -172,49 +174,60 @@ app.MapPost("/api/incomingcall", async (EventGridEvent[] events, ILogger<Program
     return Results.Ok();
 });
 
-
-
-app.MapPost("/api/callbacks/{contextId}", async (context) =>
+app.MapPost("/api/callbacks/{contextId}", async (
+    [FromBody] CloudEvent[] cloudEvents,
+    [FromRoute] string contextId,
+    [Required] string callerId,
+    CallAutomationClient callAutomationClient,
+    ILogger<Program> logger) =>
 {
-    // Parse incoming cloud events
-    var cloudEvents = await context.Request.ReadFromJsonAsync<CloudEvent[]>() ?? Array.Empty<CloudEvent>();
-    var contextId = context.Request.RouteValues["contextId"]?.ToString() ?? "";
-    var callerId = context.Request.Query["callerId"].ToString() ?? "";
-
-    foreach (var cloudEvent in cloudEvents)
-    {
-        // Parse the cloud event to get the call event details
-        CallAutomationEventBase callEvent = CallAutomationEventParser.Parse(cloudEvent);
-        var callConnection = callClient.GetCallConnection(callEvent.CallConnectionId);
-        var callConnectionMedia = callConnection.GetCallMedia();
-
-        var messages = chatSessions[contextId];
-
-        var phoneId = new PhoneNumberIdentifier(callerId);
-
-        if (callEvent is CallConnected)
-        {
-            // If the call is connected, get a response from the chatbot and send it to the user
-            var response = await GetChatGPTResponse(messages);
-            messages.Add(new ChatMessage(ChatRole.Assistant, response));
-            await SayAndRecognize(callConnectionMedia, phoneId, response);
-        }
-        if (callEvent is RecognizeCompleted recogEvent
-            && recogEvent.RecognizeResult is SpeechResult speech_result)
-        {
-            // If speech is recognized, get a response from the chatbot based on the recognized speech and send it to the user
-            messages.Add(new ChatMessage(ChatRole.User, speech_result.Speech));
-
-            var response = await GetChatGPTResponse(messages);
-            //Handle complete data collection
-            //if(response == "complete"){
-            //    await callConnectionMedia.StopRecognizingAsync();
-            //}
-            messages.Add(new ChatMessage(ChatRole.Assistant, response));
-            await SayAndRecognize(callConnectionMedia, phoneId, response);
-        }
-    }
+    var eventProcessor = callClient.GetEventProcessor();
+    eventProcessor.ProcessEvents(cloudEvents);
+    return Results.Ok();
 });
+
+
+//  app.MapPost("/api/callbacks/{contextId}", async (context) =>
+// {
+//     // Parse incoming cloud events
+//     var cloudEvents = await context.Request.ReadFromJsonAsync<CloudEvent[]>() ?? Array.Empty<CloudEvent>();
+//     var contextId = context.Request.RouteValues["contextId"]?.ToString() ?? "";
+//     var callerId = context.Request.Query["callerId"].ToString() ?? "";
+
+//     foreach (var cloudEvent in cloudEvents)
+//     {
+//         // Parse the cloud event to get the call event details
+//         CallAutomationEventBase callEvent = CallAutomationEventParser.Parse(cloudEvent);
+//         var callConnection = callClient.GetCallConnection(callEvent.CallConnectionId);
+//         var callConnectionMedia = callConnection.GetCallMedia();
+
+//         var messages = chatSessions[contextId];
+
+//         var phoneId = new PhoneNumberIdentifier(callerId);
+
+//         if (callEvent is CallConnected)
+//         {
+//             // If the call is connected, get a response from the chatbot and send it to the user
+//             var response = await GetChatGPTResponse(messages);
+//             messages.Add(new ChatMessage(ChatRole.Assistant, response));
+//             await SayAndRecognize(callConnectionMedia, phoneId, response);
+//         }
+//         if (callEvent is RecognizeCompleted recogEvent
+//             && recogEvent.RecognizeResult is SpeechResult speech_result)
+//         {
+//             // If speech is recognized, get a response from the chatbot based on the recognized speech and send it to the user
+//             messages.Add(new ChatMessage(ChatRole.User, speech_result.Speech));
+
+//             var response = await GetChatGPTResponse(messages);
+//             //Handle complete data collection
+//             //if(response == "complete"){
+//             //    await callConnectionMedia.StopRecognizingAsync();
+//             //}
+//             messages.Add(new ChatMessage(ChatRole.Assistant, response));
+//             await SayAndRecognize(callConnectionMedia, phoneId, response);
+//         }
+//     }
+// });
 
 app.Run();
 
